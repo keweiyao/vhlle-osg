@@ -6,14 +6,14 @@
 
 using namespace std ;
 
-Eos_hotqcd::Eos_hotqcd()
+Eos_hotqcd::Eos_hotqcd(std::string filename)
 {
   double e, p, s, t;
   etab.clear();
   ptab.clear();
   stab.clear();
   ttab.clear();
-  ifstream filein("eos/hotqcd.dat");
+  ifstream filein(filename);
   while(!filein.eof())
     {
 	filein >> e >> p >> s >> t;

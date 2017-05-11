@@ -1,12 +1,15 @@
 #include <vector>
-class EoS ;
+#include <string>
+
+class EoS;
+
 class Eos_hotqcd : public EoS
 {
  private:
   std::vector<double> etab, stab, ptab, ttab;
 	double e_min, devene;
  public:
-	Eos_hotqcd(void);
+	Eos_hotqcd(std::string filename);
 	~Eos_hotqcd(void);
 
 	virtual void eos(double e, double nb, double nq, double ns,

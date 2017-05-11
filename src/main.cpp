@@ -23,6 +23,7 @@ double ic_dxy, ic_deta;
 
 char outputDir[255];
 char icInputFile [255] ;
+char eosfile[255];
 double etaS_min, etaS_slope_QGP, etaS_HRG, zetaS, eCrit;
 
 void readParameters(char *parFile)
@@ -37,6 +38,7 @@ void readParameters(char *parFile)
 	 sline >> parName >> parValue ;
 	 if     (strcmp(parName,"outputdir")==0) strcpy(outputDir, parValue) ;
 	 else if(strcmp(parName,"icinputfile")==0) strcpy(icInputFile, parValue) ;
+	 else if(strcmp(parName,"eosfile")==0) strcpy(eosfile, parValue) ;
 	 else if(strcmp(parName,"nx")==0) nx = atoi(parValue) ;
 	 else if(strcmp(parName,"ny")==0) ny = atoi(parValue) ;
 	 else if(strcmp(parName,"nz")==0) nz = atoi(parValue) ;
@@ -69,6 +71,7 @@ void printParameters()
   cout << "====== parameters ======\n" ;
   cout << "outputDir = " << outputDir << endl ;
   cout << "icInputFile = " << icInputFile << endl ;
+  cout << "eosfile = " << eosfile << endl;
   cout << "hydro grid = " <<  nx << " x " << ny << " x " << nz << endl ;
   cout << "hydro area = " << "[" << -xmax << "," << xmax << "]" << " x " 
                           << "[" << -ymax << "," << ymax << "]" << " x "
@@ -105,7 +108,7 @@ int main(int argc, char **argv)
   printParameters() ;
  
    // eos
-  eos = new Eos_hotqcd();
+  eos = new Eos_hotqcd(eosfile);
   
   // transport coefficients
   trcoeff = new TransportCoeff(etaS_min, etaS_slope_QGP, etaS_HRG, zetaS, eos) ;

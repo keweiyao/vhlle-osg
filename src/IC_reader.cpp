@@ -21,8 +21,8 @@ IC_reader::IC_reader(char* filename, EoS *_eos, int ic_nxy, int ic_neta, double 
   IC_dz_(ic_deta),
   IC_xmin_(-0.5*(ic_nxy - 1)*ic_dxy),
   IC_ymin_(-0.5*(ic_nxy - 1)*ic_dxy),
-  IC_zmin_(-0.5*(ic_neta)*ic_deta)
-{
+  IC_zmin_(-0.5*(ic_neta - 1)*ic_deta)
+{ 
   eos = _eos;
   readFile_hdf5(filename, eos);
 }
@@ -89,7 +89,6 @@ void IC_reader::setIC(Fluid *f, double tau) {
   double vx = 0., vy = 0., vz = 0.;
   double Q[7];
   Cell *c;
-  ofstream file("check.txt");
   double avv_num = 0., avv_den = 0.;
   double Etotal = 0.0;
   for (int ix = 0; ix < f->getNX(); ix++){
@@ -105,23 +104,11 @@ void IC_reader::setIC(Fluid *f, double tau) {
 	avv_den += e;
 	c->setPrimVar(eos, tau, e, nb, nq, 0., vx, vy, vz);	
 	double _p = eos->p(e, nb, nq, 0.);
-	if (iz == 20){
-		double temp, h1, h2, h3, h4;
-		eos->eos(e, nb, nq, 0.0, temp, h1, h2, h3, h4);
-		file << temp << " ";
-	}
-	const double gamma2 = 1.0 / (1.0 - vx * vx - vy * vy - vz * vz);
-	Etotal +=
-	  ((e + _p) * gamma2 * (cosh(eta) + vz * sinh(eta)) - _p * cosh(eta));
 	c->saveQprev();
 	if (e > 0.) c->setAllM(1.);
       }
     }
   }
-  std::cout << "average initial flow = " << avv_num / avv_den << std::endl;
-  std::cout << "total energy = "
-	    << Etotal *f->getDx() * f->getDy() * f->getDz() * tau
-	    << std::endl;
 }
 
 void IC_reader::readFile(char* filename, EoS *eos) {
@@ -132,7 +119,7 @@ void IC_reader::readFile(char* filename, EoS *eos) {
   }
   int line = 0, errors = 0;
   int ix, iy, ieta;
-  double t00, t01, t02, t03, check;
+  double t00, t01, t02, t03;
   double sd, ed, nb;
   while (!inputfile.eof()) {
     inputfile >> ix >> iy >> ieta >> sd;
@@ -145,23 +132,12 @@ void IC_reader::readFile(char* filename, EoS *eos) {
     t01=0.;
     t02=0.;
     t03=0.;
-    check=0;
-    //ftest_initial << ix<<'\t'  << iy<<'\t'  <<ieta <<'\t' << ed <<'\t' <<sd <<'\t'<<nb<< std::endl; 
-    if ((int)check == 0) {
-      t00vec_.push_back(t00);
-      t01vec_.push_back(t01);
-      t02vec_.push_back(t02);
-      t03vec_.push_back(t03);
 
-    } else {
-      std::cout << "Warning: Line " << line << " in file " << filename << std::endl;
-      std::cout << "Nonzero check value: " << check << std::endl;
-      errors++;
-      if (errors > 100) {
-	std::cout << "Too many failed checks, exiting." << std::endl;
-	exit(1);
-      }
-    }
+    t00vec_.push_back(t00);
+    t01vec_.push_back(t01);
+    t02vec_.push_back(t02);
+    t03vec_.push_back(t03);
+
     line++;
     if( (line % 1000) == 0)
     {std::cout << "reading initial lines" << line<<std::endl;}
@@ -224,7 +200,6 @@ void IC_reader::readFile_hdf5(char* filename, EoS *eos)
 	nb = 0.0;
 	if(sd < 1.0e-8) {ed = 0.0;}
 	else {eos->gete(sd, ed, nb);}
-	//	std::cout << "check "<< ed << std::endl;
 	t00=ed;
 	t01=0.;
 	t02=0.;

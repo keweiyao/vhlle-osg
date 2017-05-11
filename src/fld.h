@@ -19,8 +19,7 @@ private:
     double tcrit ;
   	double ecrit ;
   	double vEff, EtotSurf ;
-	std::ofstream foutkw, foutkw_dim, foutxvisc, foutyvisc, foutdiagvisc,
-	foutx, fouty, foutdiag, foutz, fout_aniz, fout2d, ffreeze, fvhlle_hydro, fstep, fnormal;
+	std::ofstream ffreeze;
   	int compress2dOut ;
 public:
 	Fluid(EoS *_eos, TransportCoeff *_trcoeff, int _nx, int _ny, int _nz,
@@ -59,8 +58,6 @@ public:
 	void correctImagCellsFull(void) ; // correct ideal+visc
 	void updateM(double tau, double dt) ;
 
-	void outputPDirections(double tau) ;
-  	void outputGnuplot(double tau) ;
 	void outputSurface(double tau) ;
   	void outputCorona(double tau) ;
 };

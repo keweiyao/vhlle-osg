@@ -18,32 +18,33 @@ TransportCoeff::TransportCoeff(double _etaS_min, double _etaS_slope_QGP, double 
  etaS_slope_HRG = _etaS_slope_HRG ;
  zetaS = _zetaS ;
  eos = _eos ; 
+ if (zetaS > 1e-5 || 
+	(etaS_min + etaS_slope_QGP) > 1e-5 ||
+	etaS_slope_HRG > 1e-5)	isvis = true;
+ else {isvis = false; std::cout << "Ideal fluid";}
+
 }
 
 void TransportCoeff::getEta(double e, double T, double &_etaS, double &_zetaS)
 {
   //zeta/s
-  //  double x = T/0.18;
-  // if(T<Ta){ _zetaS = zetaS * (C1 + lambda1*exp((x-1)/sigma1) + lambda2*exp((x-1)/sigma2)) ;}
-  //else if(T>Tb){ _zetaS = zetaS * (C2 + lambda3*exp(-(x-1)/sigma3) + lambda4*exp(-(x-1)/sigma4)) ;}
-  //else {_zetaS = zetaS * (A0 + A1*x + A2*x*x) ;}
-  _zetaS = 0.0;  
-  // eta/s
-  if (T >= Tc)
-    {
-      _etaS = etaS_min + (T-Tc)*etaS_slope_QGP;
-    }
-  if (T < Tc)
-    {
-      _etaS = etaS_slope_HRG ;
-    }
+  double x = T/0.18;
+  if (T<Ta) 
+	_zetaS = zetaS * (C1 + lambda1*exp((x-1)/sigma1) + lambda2*exp((x-1)/sigma2));
+  else if(T>Tb)
+	_zetaS = zetaS * (C2 + lambda3*exp(-(x-1)/sigma3) + lambda4*exp(-(x-1)/sigma4));
+  else 
+	_zetaS = zetaS * (A0 + A1*x + A2*x*x);
 
+  // eta/s
+  if (T >= Tc) _etaS = etaS_min + (T-Tc)*etaS_slope_QGP;
+  else _etaS = etaS_slope_HRG ;
 }
 
 
 void TransportCoeff::getTau(double T, double &_taupi, double &_tauPi)
 {
-        double etaS; 
+    double etaS; 
 	if (T >= 0.154)
 	  etaS = etaS_min + (T-0.154)*etaS_slope_QGP;
 	else

@@ -16,6 +16,8 @@
 
 using namespace std ;
 
+size_t width = 15;
+
 // returns the velocities in cartesian coordinates, fireball rest frame. Y=longitudinal rapidity of fluid
 void Fluid::getCMFvariables(Cell *c, double tau, double &e, double &nb, double &nq, double &ns, double &vx, double &vy, double &Y)
 {
@@ -114,43 +116,13 @@ void Fluid::initOutput(char *dir, int maxstep, double tau0, int cmpr2dOut)
 	char command [255] ;
 	sprintf(command, "mkdir -p %s",dir) ;
 	system(command) ;
-	string outx = dir ; outx.append("/outx.dat");
-	string outxvisc = dir ; outxvisc.append("/outx.visc.dat");
-	string outyvisc = dir ; outyvisc.append("/outy.visc.dat");
-	string outdiagvisc = dir ; outdiagvisc.append("/diag.visc.dat");
-	string outy = dir ; outy.append("/outy.dat");
-	string outdiag = dir ; outdiag.append("/outdiag.dat");
-	string outz = dir ; outz.append("/outz.dat");
-	string outaniz = dir ; outaniz.append("/out.aniz.dat");
-	string out2d = dir ; out2d.append("/out2D.dat");
-	string outfreeze = dir ; outfreeze.append("/freezeout.dat");
-	
-	
-	foutx.open(outx.c_str()) ; 
-	fouty.open(outy.c_str()) ; 
-	foutz.open(outz.c_str()) ;
-	foutdiag.open(outdiag.c_str()) ;
-	fout2d.open(out2d.c_str()) ;
-	foutxvisc.open(outxvisc.c_str()) ;
-	foutyvisc.open(outyvisc.c_str()) ;
-	foutdiagvisc.open(outdiagvisc.c_str()) ;
-	fout_aniz.open(outaniz.c_str()) ;
+
+	string outfreeze = dir; 
+	outfreeze.append("/freezeout.dat");
 	ffreeze.open(outfreeze.c_str()) ;
 	
-	//################################################################
-	// important remark. for correct diagonal output, nx=ny must hold.
-	//################################################################
-	foutxvisc 		<< maxstep + 1 	<< "  " << getNX() << endl ;
-	foutyvisc 		<< maxstep + 1 	<< "  " << getNY() << endl ;
-	foutdiagvisc 	<< maxstep + 1 	<< "  " << getNX() << endl ;
-	foutx 			<< "# " 	   	<< maxstep + 1 << "  " << getNX() << endl ;
-	fouty			<< "# "  		<< maxstep + 1 << "  " << getNY() << endl ;
-	foutdiag 		<< "# "  		<< maxstep + 1 << "  " << getNX() << endl ;
-	foutz 			<< "# "  		<< maxstep + 1 << "  " << getNZ() << endl ;
-	fout2d 			<< " " 			<< maxstep+1  << "  " << (getNX()-5)+1 << "  " << (getNY()-5)+1 << endl ;
-	fout2d 			<< tau0 		<< "  " << tau0+0.05*maxstep << "  " << getX(2) << "  " << getX(getNX()-3) << "  "
-		   			<< getY(2) 		<< "  " << getY(getNY()-3) << endl ;
-	outputPDirections(tau0);
+	// freezeout header file
+	ffreeze << "# t x y z st sx sy sz vx vy vz pi11 pi12 pi13 pi22 pi23 pi33" << endl;
 }
 
 
@@ -410,49 +382,7 @@ void Fluid::updateM(double tau, double dt)
 }
 
 
-void Fluid::outputPDirections(double tau)
-{
-  	outputGnuplot(tau) ;
- 	return ;
-}
-
-void Fluid::outputGnuplot(double tau)
-{
-	double e, p, nb, nq, ns, t, mub, muq, mus, vx, vy, vz ;
-//-****** output procedure by Yingru **********************-/
-//// hydro information on every grid point
-	int op_ctl=int((tau-0.6)/0.04);
-    if(op_ctl % 2 == 0)
-    {
-        fstep << op_ctl << endl;
-        fvhlle_hydro << "# tau= "<< tau<<endl;
-        fvhlle_hydro << "#	x	y	z	vx	vy	vzlab	T	e	ns" << endl;
-        for(int ix=0; ix<nx; ix++)
-        {
-           	for(int iy=0; iy<ny; iy++)
-            {
-                for(int iz=0; iz<nz; iz++)
-                {
-                    double x=getX(ix);
-            	    double y=getY(iy);
-            	    double z=getZ(iz);
-            	    Cell *c =getCell(ix,iy,iz);
-            	    getCMFvariables_new(c, tau, e, nb, nq, ns, vx, vy, vz);
-            	    eos->eos(e, nb, nq, ns, t, mub, muq, mus, p);
-
-                    //if(x<5.11 && x>-5.11 && y<5.11 && y>-5.11)
-                   	{
-                   		fvhlle_hydro << setw(6) << x << setw(6) << y << setw(6) << z 
-                   					 << setw(15) << vx << setw(15) << vy << setw(15) << vz 
-                   					 << setw(15) << t << setw(15) << e <<setw(15) << ns 
-                   					 << endl;
-                   	}
-                }
-            }
-        }
-    }
-}
-
+// Modified by Weiyao to reduce the hyper surface output
 void Fluid::outputSurface(double tau)
 {
 	static double nbSurf = 0.0 ;
@@ -479,7 +409,6 @@ void Fluid::outputSurface(double tau)
 	}
 	//----end Cornelius
 	
-	fout2d << endl ;
 	double cosh_int, sinh_int, tanh_vz, tanh_vz_sq2, norm_v, product_v,
 	  vx2, vy2, vt_sq2, norm_vt, eh, cosh_eta, sinh_eta, norm_v_sq2;
 		
@@ -564,12 +493,6 @@ void Fluid::outputSurface(double tau)
   				pi0x_num += e/norm_v_sq2*fabs(c->getpi(0,1)) ;
   				pi0x_den += e/norm_v_sq2;
 
-  				/*if(ix%compress2dOut==0&&iy%compress2dOut==0)*/
-  				//fout2d<<setw(10)<<tau<<setw(4)<<iz<<setw(4)<<ix<<setw(4)<<iy<<setw(14)<<e<<setw(14)<<vx<<setw(14)<<vy<<setw(14)<<vz
-  				//<<setw(14)<<c->getViscCorrCutFlag()<<setw(14)<<c->getpi(0,0)<<setw(14)<<c->getpi(0,1)<<setw(14)<<c->getpi(0,2)
-  				//<<setw(14)<<c->getpi(0,3)<<setw(14)<<c->getpi(1,1)<<setw(14)<<c->getpi(1,2)<<setw(14)<<c->getpi(1,3)<<setw(14)
-  				//<<c->getpi(2,2)<<setw(14)<<c->getpi(2,3)<<setw(14)<<c->getpi(3,3)<<setw(14)<<Q[0]<<setw(14)<<Q[1]<<setw(14)<<Q[2]<<setw(14)<<Q[3]
- 				 //<<endl ;
 //----- Cornelius stuff
   				double QCube[2][2][2][2][7] ;
  				double piSquare[2][2][2][10], PiSquare[2][2][2] ;
@@ -607,10 +530,17 @@ void Fluid::outputSurface(double tau)
   				for(int isegm=0; isegm<Nsegm; isegm++)
   				{
 				    nelements++ ;
-				    ffreeze.precision(15);
+				    ffreeze.precision(6);
 				    
-				    ffreeze << setw(24) << tau+cornelius->get_centroid_elem(isegm,0) << setw(24) << getX(ix)+cornelius->get_centroid_elem(isegm,1)
-					    << setw(24) << getY(iy)+cornelius->get_centroid_elem(isegm,2) << setw(24) << getZ(iz)+cornelius->get_centroid_elem(isegm,3) ;
+					// Weiyao: from curvelinear cx^mu to cartesian x^mu
+					double cx0 = tau+cornelius->get_centroid_elem(isegm,0), 
+						   x1 = getX(ix)+cornelius->get_centroid_elem(isegm,1), 						   x2 = getY(iy)+cornelius->get_centroid_elem(isegm,2),
+						   cx3 = getZ(iz)+cornelius->get_centroid_elem(isegm,3);
+					double x0 = cx0*cosh(cx3), x3 = cx0*sinh(cx3);
+				    ffreeze << setw(width) << x0 
+							<< setw(width) << x1
+					   		<< setw(width) << x2
+							<< setw(width) << x3;
 				    
 				    // ---- interpolation procedure
 				    double vxC=0., vyC=0., vzC=0., TC=0., mubC=0., muqC=0., musC=0., piC[10], PiC=0., nbC=0., nqC=0. ; // values at the centre, to be interpolated
@@ -665,9 +595,9 @@ void Fluid::outputSurface(double tau)
 				    double etaC = getZ(iz) + cornelius->get_centroid_elem(isegm,3) ;
 				    transformToLab(etaC, vxC, vyC, vzC) ; // viC is now in lab.frame!
 				    double gammaC = 1./sqrt(1.-vxC*vxC-vyC*vyC-vzC*vzC) ;
-				    double uC [4] = {gammaC, gammaC*vxC, gammaC*vyC, gammaC*vzC} ;
+				    double uC[4] = {gammaC, gammaC*vxC, gammaC*vyC, gammaC*vzC} ;
 				    const double tauC = tau+cornelius->get_centroid_elem(isegm,0) ;
-				    double dsigma [4] ;
+				    double dsigma[4] ;
 				    // ---- transform dsigma to lab.frame :
 				    const double ch = cosh(etaC) ;
 				    const double sh = sinh(etaC) ;
@@ -678,25 +608,27 @@ void Fluid::outputSurface(double tau)
 				    double dVEff = 0.0 ;
 				    for(int ii=0; ii<4; ii++) dVEff += dsigma[ii]*uC[ii] ; // normalize for Delta eta=1
 				    vEff += dVEff ;
-				    for(int ii=0; ii<4; ii++) ffreeze<<setw(24)<<dsigma[ii] ;
-				    for(int ii=0; ii<4; ii++) ffreeze<<setw(24)<<uC[ii] ;
-				    ffreeze<<setw(24)<<TC<<setw(24)<<mubC<<setw(24)<<muqC<<setw(24)<<musC ;
+
+					// Weiyao: output dsigma_mu
+				    for(int ii=0; ii<4; ii++) ffreeze << setw(width) << dsigma[ii] ;
+				    // Weiyao: output 3-velocity
+					ffreeze << setw(width) << vxC
+				    		<< setw(width) << vyC
+							<< setw(width) << vzC;
 #ifdef OUTPI
-				    double picart[10] ;
-				    /*pi00*/ picart[index44(0,0)] = ch*ch*piC[index44(0,0)]+2.*ch*sh*piC[index44(0,3)]+sh*sh*piC[index44(3,3)] ;
-				    /*pi01*/ picart[index44(0,1)] = ch*piC[index44(0,1)]+sh*piC[index44(3,1)] ;
-				    /*pi02*/ picart[index44(0,2)] = ch*piC[index44(0,2)]+sh*piC[index44(3,2)] ;
-				    /*pi03*/ picart[index44(0,3)] = ch*sh*(piC[index44(0,0)]+piC[index44(3,3)])+(ch*ch+sh*sh)*piC[index44(0,3)] ;
-				    /*pi11*/ picart[index44(1,1)] = piC[index44(1,1)] ;
-				    /*pi12*/ picart[index44(1,2)] = piC[index44(1,2)] ;
-				    /*pi13*/ picart[index44(1,3)] = sh*piC[index44(0,1)]+ch*piC[index44(3,1)] ;
-				    /*pi22*/ picart[index44(2,2)] = piC[index44(2,2)] ;
-				    /*pi23*/ picart[index44(2,3)] = sh*piC[index44(0,2)]+ch*piC[index44(3,2)] ;
-				    /*pi33*/ picart[index44(3,3)] = sh*sh*piC[index44(0,0)]+ch*ch*piC[index44(3,3)]+2.*sh*ch*piC[index44(0,3)] ;
-				    for(int ii=0; ii<10; ii++) ffreeze<<setw(24)<<picart[ii] ;
-				    ffreeze<<setw(24)<<PiC<<endl ;
+					// Weiyao: only output pi tensor spatial component 11, 12, 13, 22, 23, other components can be reconstructed by symmetry+traceless+orthogonality
+				    double picart[5];
+				    /*pi11*/ picart[0] = piC[index44(1,1)] ;
+				    /*pi12*/ picart[1] = piC[index44(1,2)] ;
+				    /*pi13*/ picart[2] = sh*piC[index44(0,1)]+ch*piC[index44(3,1)] ;
+				    /*pi22*/ picart[3] = piC[index44(2,2)] ;
+				    /*pi23*/ picart[4] = sh*piC[index44(0,2)]+ch*piC[index44(3,2)] ;
+				    for(int ii=0; ii<5; ii++) ffreeze <<setw(width) << picart[ii] ;
+
+					// no bulk output!
+				    ffreeze << endl;
 #else	
-				    ffreeze<<setw(24)<<dVEff<<endl ;
+				    ffreeze << setw(width) << dVEff << endl ;
 #endif	
 				    double dEsurfVisc = 0. ;
 				    for(int i=0; i<4; i++) dEsurfVisc += picart[index44(0,i)]*dsigma[i] ;
@@ -714,13 +646,9 @@ void Fluid::outputSurface(double tau)
  	S=S*dV ;
  	Nb1 *= dV ; 
 	Nb2 *= dV ;
- 	fout_aniz << setw(12) << tau << setw(14) << vt_num/vt_den <<
- 	setw(14) << vxvy_num/vxvy_den << setw(14) << pi0x_num/pi0x_den << endl ;
  	cout << setw(10) << tau << setw(13) << E << setw(13) << Efull << setw(13) << nbSurf
 	     << setw(13) << S << setw(10) << nelements << setw(10) << nsusp 
 	     << setw(13) << (float)(nCoreCutCells)/(float)(nCoreCells) << endl ;
-	// cout << setw(12) << "Px = " << setw(14) << Px << "  vEff = " << vEff << "  Esurf = " <<setw(14)<<EtotSurf << endl ;
-	// cout << "Nb1 = " << setw(14) << Nb1 << "  Nb2 = " << setw(14) << Nb2 << endl ;
 	//-- Cornelius: all done, let's free memory
   	for (int i1=0; i1 < 2; i1++)
   	{
@@ -749,7 +677,6 @@ void Fluid::outputCorona(double tau)
     double eta=0 ;
     int nelements=0 ;
 
-    fout2d << endl ;
     for(int ix=2; ix<nx-2; ix++)
         for(int iy=2; iy<ny-2; iy++)
 	    for(int iz=2; iz<nz-2; iz++)
@@ -820,9 +747,16 @@ void Fluid::outputCorona(double tau)
 		if(isCorona && !isTail)
 		{
 		    nelements++ ;
-		    ffreeze.precision(15) ;
-		    ffreeze<<setw(24)<<tau<<setw(24)<<getX(ix)+0.5*dx
-			   <<setw(24)<<getY(iy)+0.5*dy<<setw(24)<<getZ(iz)+0.5*dz ;
+		    ffreeze.precision(6) ;
+			double cx0 = tau, 
+				   x1 = getX(ix)+0.5*dx,
+				   x2 = getY(iy)+0.5*dy,
+				   cx3 = getZ(iz)+0.5*dz;
+			double x0 = cx0*cosh(cx3), x3 = cx0*sinh(cx3);
+		    ffreeze << setw(width) << x0
+					<< setw(width) << x1
+					<< setw(width) << x2
+					<< setw(width) << x3;
 		    // ---- interpolation procedure
 		    double vxC=0., vyC=0., vzC=0., TC=0., mubC=0., muqC=0., musC=0., piC[10], PiC=0., nbC=0., nqC=0. ; // values at the centre, to be interpolated
 		    double QC [7] = {0., 0., 0., 0., 0., 0., 0.} ;
@@ -843,9 +777,6 @@ void Fluid::outputCorona(double tau)
 		    {
 		        cout << "#### Error (surface): high T/mu_b ####\n" ;
 		    }
-		    //double Teos ;
-		    //eos->eos(eC,0.,0.,0.,Teos, mub, muq, mus, p) ; // now temperature from EoS
-		    //if(fabs(eC-0.5)>0.01) {cout<<"+++ eC= "<<setw(14)<<eC<<", cell "<<ix<<" "<<iy<<" "<<iz<<endl;}
 		    for(int jx=0; jx<2; jx++)
 		        for(int jy=0; jy<2; jy++)
 			    for(int jz=0; jz<2; jz++)
@@ -865,11 +796,9 @@ void Fluid::outputCorona(double tau)
 		    double etaC = getZ(iz) + 0.5*dz ;
 		    transformToLab(etaC, vxC, vyC, vzC) ; // viC is now in lab.frame!
 		    double gammaC = 1./sqrt(1.-vxC*vxC-vyC*vyC-vzC*vzC) ;
-		    //ffreeze<<setw(14)<<ccube[0][0][0][0]<<setw(14)<<ccube[0][1][0][0]<<endl<<setw(14)<<ccube[1][0][0][0]<<setw(14)<<ccube[1][1][0][0]<<endl ;
 		    double uC [4] = {gammaC, gammaC*vxC, gammaC*vyC, gammaC*vzC} ;
 		    const double tauC = tau ;
 		    double dsigma [4] ;
-		    // for(int ii=0; ii<4; ii++) dsigma[ii] = cornelius->get_normal_elem(0,ii) ;
 		    // ---- transform dsigma to lab.frame :
 		    const double ch = cosh(etaC) ;
 		    const double sh = sinh(etaC) ;
@@ -880,25 +809,21 @@ void Fluid::outputCorona(double tau)
 		    double dVEff = 0.0 ;
 		    for(int ii=0; ii<4; ii++) dVEff += dsigma[ii]*uC[ii] ; // normalize for Delta eta=1
 		    vEff += dVEff ;
-		    for(int ii=0; ii<4; ii++) ffreeze<<setw(24)<<dsigma[ii] ;
-		    for(int ii=0; ii<4; ii++) ffreeze<<setw(24)<<uC[ii] ;
-		    ffreeze<<setw(24)<<TC<<setw(24)<<mubC<<setw(24)<<muqC<<setw(24)<<musC ;
+		    for(int ii=0; ii<4; ii++) ffreeze << setw(width) << dsigma[ii] ;
+		    ffreeze << setw(width) << vxC 
+				    << setw(width) << vyC 
+					<< setw(width) << vzC;
 #ifdef OUTPI
-		    double picart[10] ;
-		    /*pi00*/ picart[index44(0,0)] = ch*ch*piC[index44(0,0)]+2.*ch*sh*piC[index44(0,3)]+sh*sh*piC[index44(3,3)] ;
-		    /*pi01*/ picart[index44(0,1)] = ch*piC[index44(0,1)]+sh*piC[index44(3,1)] ;
-		    /*pi02*/ picart[index44(0,2)] = ch*piC[index44(0,2)]+sh*piC[index44(3,2)] ;
-		    /*pi03*/ picart[index44(0,3)] = ch*sh*(piC[index44(0,0)]+piC[index44(3,3)])+(ch*ch+sh*sh)*piC[index44(0,3)] ;
-		    /*pi11*/ picart[index44(1,1)] = piC[index44(1,1)] ;
-		    /*pi12*/ picart[index44(1,2)] = piC[index44(1,2)] ;
-		    /*pi13*/ picart[index44(1,3)] = sh*piC[index44(0,1)]+ch*piC[index44(3,1)] ;
-		    /*pi22*/ picart[index44(2,2)] = piC[index44(2,2)] ;
-		    /*pi23*/ picart[index44(2,3)] = sh*piC[index44(0,2)]+ch*piC[index44(3,2)] ;
-		    /*pi33*/ picart[index44(3,3)] = sh*sh*piC[index44(0,0)]+ch*ch*piC[index44(3,3)]+2.*sh*ch*piC[index44(0,3)] ;
-		    for(int ii=0; ii<10; ii++) ffreeze<<setw(24)<<picart[ii] ;
-		    ffreeze<<setw(24)<<PiC<<endl ;
+		    double picart[5] ;
+		    /*pi11*/ picart[0] = piC[index44(1,1)] ;
+		    /*pi12*/ picart[1] = piC[index44(1,2)] ;
+		    /*pi13*/ picart[2] = sh*piC[index44(0,1)]+ch*piC[index44(3,1)] ;
+		    /*pi22*/ picart[3] = piC[index44(2,2)] ;
+		    /*pi23*/ picart[4] = sh*piC[index44(0,2)]+ch*piC[index44(3,2)] ;
+		    for(int ii=0; ii<5; ii++) ffreeze << setw(width) << picart[ii] ;
+		    ffreeze <<endl ;
 #else
-		    ffreeze<<setw(24)<<dVEff<<endl ;
+		    ffreeze <<setw(width)<<dVEff<<endl ;
 #endif
 		    double dEsurfVisc = 0. ;
 		    for(int i=0; i<4; i++) dEsurfVisc += picart[index44(0,i)]*dsigma[i] ;
@@ -911,13 +836,9 @@ void Fluid::outputCorona(double tau)
     Efull=Efull*dx*dy*dz ;
     S=S*dx*dy*dz ;
     Nb1 *= dx*dy*dz ; Nb2 *= dx*dy*dz ;
-    fout_aniz << setw(12) << tau << setw(14) << vt_num/vt_den 
-	      << setw(14) << vxvy_num/vxvy_den << setw(14) << pi0x_num/pi0x_den << endl ;
     cout << setw(10) << "tau" << setw(13) << "E" << setw(13) << "Efull" << setw(13) << "Nb"
 	 << setw(13) << "Sfull" << setw(10) << "elements" << setw(10) << "susp." << setw(13) << "\%cut" << endl ;
     cout << setw(10) << tau << setw(13) << E << setw(13) << Efull << setw(13) << nbSurf
 	 << setw(13) << S << endl ;
-    // cout << setw(12) << "Px = " << setw(14) << Px << "  vEff = " << vEff << "  Esurf = " <<setw(14)<<EtotSurf << endl ;
-    // cout << "Nb1 = " << setw(14) << Nb1 << "  Nb2 = " << setw(14) << Nb2 << endl ;
     cout << "corona elements : " << nelements << endl ;
 }

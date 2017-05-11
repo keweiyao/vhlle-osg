@@ -29,9 +29,6 @@ inline double sign(double x)
 //#define FORMAL_SOLUTION
 // else: use 1st order finite difference update
 
-//ofstream foutNS ;
-
-
 Hydro::Hydro(Fluid *_f, EoS *_eos, TransportCoeff *_trcoeff, double _t0, double _dt)
 {
 	eos = _eos ;
@@ -39,7 +36,6 @@ Hydro::Hydro(Fluid *_f, EoS *_eos, TransportCoeff *_trcoeff, double _t0, double 
 	f = _f ;
 	dt = _dt ;
 	tau = _t0 ;
-	//foutNS.open("outputNS.dat") ;
 }
 
 Hydro::~Hydro()

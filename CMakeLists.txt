@@ -52,3 +52,4 @@ set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${CMAKE_REQUIRED_FLAGS} --co
 set(LIBRARY_NAME "lib${PROJECT_NAME}")
 
 add_subdirectory(src)
+add_subdirectory(eos)
